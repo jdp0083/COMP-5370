@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run-auto-runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install make (Linux)
+        run: sudo apt-get update && sudo apt-get install -y make
+
+      - name: Run auto-runner (make-based)
+        run: |
+          python -V
+          make -v
+          python auto-runner.py
