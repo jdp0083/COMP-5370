@@ -1,17 +1,4 @@
-# deserializer.py
-# Marshalled nosj map grammar (this file):
-#   Overall: optional leading/trailing whitespace, then "(<" ... ">)"
-#   Inside the map: "<key:value[,key:value,...]>"
-#     - key: one or more lowercase letters [a-z]+ (unique within the current map)
-#     - value: one of
-#         * num:      [01]+   (two's complement)
-#         * sstring:  [A-Za-z0-9 \t]+s   (trailing 's' is not part of value)
-#         * cstring:  token containing at least one %XX (hex), decoded as bytes
-#         * map:      nested "(< ... >)"
-#   No whitespace inside the map text except:
-#     - spaces/tabs inside a simple-string token
-#     - whitespace before "(<" or after ">)" (outermost only)
-# Output (pretty):
+# Output:
 #   - begin-map / end-map
 #   - "key -- map -- " then "begin-map"/"end-map" for nested maps
 #   - "key -- num -- <int>" for nums
@@ -23,7 +10,7 @@ import re
 import sys
 from typing import Iterator, List, Tuple
 
-# Patterns for scalar recognition
+# Regexes for token classification
 BIN_RE = re.compile(r"^[01]+$")
 SIMPLE_STR_RE = re.compile(r"^([A-Za-z0-9 \t]+)s$")
 KEY_RE = re.compile(r"^[a-z]+$")  # keys: lowercase only per spec
@@ -31,11 +18,9 @@ KEY_RE = re.compile(r"^[a-z]+$")  # keys: lowercase only per spec
 class NosjError(Exception):
     pass
 
-
 def _err(msg: str) -> Tuple[int, None]:
     sys.stderr.buffer.write((f"ERROR -- {msg}\n").encode("utf-8"))
     return 66, None
-
 
 # -------- Percent-decoding for complex strings --------
 def _decode_percent_bytes(token: str) -> Tuple[str, bool]:
@@ -115,9 +100,6 @@ def _parse_value(cur: Cursor) -> Tuple[str, str]:
     start = cur.i
     # IMPORTANT: no whitespace allowed in tokens for nums/complex strings.
     # Simple-strings may include spaces/tabs but *must* end with trailing 's'.
-    # Strategy:
-    #   - If we ever see a space/tab, we will only accept it if the entire token
-    #     matches SIMPLE_STR_RE. So we consume until next delimiter and validate.
     while True:
         c = cur.peek()
         if c == '' or c in {',', '>'}:
